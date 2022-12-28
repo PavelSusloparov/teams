@@ -1,0 +1,11 @@
+digraph G {
+    node [shape=record; fontname=Monospace; fontsize=10; penwidth=1.5];
+
+    {{ range $name, $members := .Teams -}}
+    "{{ $name }}" [ label="{*{{ $name }}*|{{ join $members "|" }}}" ]
+    {{ end }}
+
+    {{ range $child, $parent := .Subsets -}}
+    "{{ $parent }}" -> "{{ $child }}"{{ if eq $parent (index $.Parents $child) }} [penwidth=1.5]{{ else }} [style=dotted]{{ end }};
+    {{ end }}
+}
