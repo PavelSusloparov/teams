@@ -9,9 +9,11 @@ digraph G {
     "{{ $parent }}" -> "{{ $child }}" [penwidth=1.5];
     {{ end }}
 
-    {{ range $child, $parent := .Subsets -}}
-    {{- if ne $parent (index $.Parents $child) -}}
-    "{{ $parent }}" -> "{{ $child }}" [style=dotted];
+    {{ range $child, $subsets := .Subsets -}}
+    {{ range $parent, $_ := $subsets -}}
+    {{ if ne $parent (index $.Parents $child) -}}
+    "{{ $parent }}" -> "{{ $child }}" [style=dashed];
+    {{ end -}}
     {{ end -}}
     {{ end }}
 }

@@ -77,8 +77,39 @@ func main() {
 	log.Println("Done!")
 }
 
-func FindSubsets(teams map[string][]string) map[string]string {
-	subsets := make(map[string]string)
+type subsets map[string]map[string]struct{}
+
+func (s subsets) IsSubset(team string, otherTeam string) bool {
+	if teamSubsets, ok := s[team]; ok {
+		if _, ok := teamSubsets[otherTeam]; ok {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (s subsets) AddSubset(team string, otherTeam string) {
+	if _, ok := s[team]; !ok {
+		s[team] = map[string]struct{}{}
+	}
+
+	s[team][otherTeam] = struct{}{}
+}
+
+func (s subsets) GetSubsets(team string) []string {
+	var subsets []string
+	if teamSubsets, ok := s[team]; ok {
+		for subset := range teamSubsets {
+			subsets = append(subsets, subset)
+		}
+	}
+
+	return subsets
+}
+
+func FindSubsets(teams map[string][]string) subsets {
+	var s subsets = map[string]map[string]struct{}{}
 
 	for team, members := range teams {
 		if len(members) == 0 {
@@ -94,9 +125,9 @@ func FindSubsets(teams map[string][]string) map[string]string {
 				continue
 			}
 
-			if subsets[team] == otherTeam || subsets[otherTeam] == team {
+			// check if we already found a subset
+			if s.IsSubset(team, otherTeam) || s.IsSubset(otherTeam, team) {
 				// already found a subset
-				continue
 			}
 
 			// find common members
@@ -114,16 +145,16 @@ func FindSubsets(teams map[string][]string) map[string]string {
 			}
 
 			if len(commonMembers) == len(members) {
-				subsets[team] = otherTeam
+				s.AddSubset(team, otherTeam)
 			}
 
 			if len(commonMembers) == len(otherMembers) {
-				subsets[otherTeam] = team
+				s.AddSubset(otherTeam, team)
 			}
 		}
 	}
 
-	return subsets
+	return s
 }
 
 func FindMembersWithoutTeam(teams map[string][]string, members []string) []string {
@@ -148,7 +179,7 @@ type data struct {
 	Teams              map[string][]string
 	Parents            map[string]string
 	Members            []string
-	Subsets            map[string]string
+	Subsets            subsets
 	MembersWithoutTeam []string
 }
 
