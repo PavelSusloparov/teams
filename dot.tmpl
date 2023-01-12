@@ -10,8 +10,8 @@ digraph G {
     {{ end }}
 
     {{ range $child, $parent := .Subsets -}}
-    {{ if ne $parent (index $.Parents $child) -}}
+    {{- if ne $parent (index $.Parents $child) -}}
     "{{ $parent }}" -> "{{ $child }}" [style=dotted];
-    {{ end }}
+    {{ end -}}
     {{ end }}
 }

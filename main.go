@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	_ "embed"
 	"log"
 	"os"
 	"strings"
@@ -15,7 +16,7 @@ import (
 type config struct {
 	Token    string `env:"GITHUB_TOKEN" long:"token" description:"GitHub access token" required:"true"`
 	OrgName  string `env:"GITHUB_ORG" long:"org" description:"GitHub organization name" required:"true"`
-	Template string `env:"TEMPLATE" long:"template" description:"Go template" default:"dot.tmpl"`
+	Template string `env:"TEMPLATE" long:"template" description:"Go template" default:""`
 	Output   string `env:"OUTPUT" long:"output" description:"Output file" default:"output/graph.dot"`
 }
 
@@ -157,8 +158,20 @@ var funcMap = template.FuncMap{
 	},
 }
 
+//go:embed dot.tmpl
+var dotTemplate string
+
 func renderTemplate(tmpl, output string, data data) error {
-	t, err := template.New("").Funcs(funcMap).ParseGlob("templates/*.tmpl")
+	var err error
+
+	t := template.New(tmpl).Funcs(funcMap)
+
+	if tmpl == "" {
+		t, err = t.Parse(dotTemplate)
+	} else {
+		t, err = t.ParseFiles(tmpl)
+	}
+
 	if err != nil {
 		return err
 	}
