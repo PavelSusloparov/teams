@@ -30,6 +30,7 @@ run-app: build
 # Install graphviz with `brew install graphviz`
 run-graphviz:
 	@dot -Tpng -o output/graph.png output/graph.dot
+	@dot -Tsvg -o output/graph.svg output/graph.dot
 
 .PHONY: run
 ## run: Run app and graphviz
