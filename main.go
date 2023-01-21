@@ -128,6 +128,7 @@ func FindSubsets(teams map[string][]string) subsets {
 			// check if we already found a subset
 			if s.IsSubset(team, otherTeam) || s.IsSubset(otherTeam, team) {
 				// already found a subset
+				continue
 			}
 
 			// find common members
