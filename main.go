@@ -24,6 +24,10 @@ func main() {
 	var cfg config
 	_, err := flags.Parse(&cfg)
 	if err != nil {
+		if flagsErr, ok := err.(*flags.Error); ok && flagsErr.Type == flags.ErrHelp {
+			os.Exit(0)
+			return
+		}
 		log.Fatalf("Error parsing flags: %v", err)
 	}
 
