@@ -6,6 +6,9 @@ on:
       - main
   pull_request:
 
+env:
+  DOCKER_IMAGE: chuhlomin/teams
+
 jobs:
   main:
     runs-on: ubuntu-latest
@@ -25,3 +28,14 @@ jobs:
 
       - name: Test
         run: go test -cover ./...
+
+      - name: Build and push to CR
+        if: github.event_name == 'push'
+        uses: chuhlomin/actions/docker-build-push@main
+        with:
+          username: chuhlomin
+          password: ${{ secrets.DOCKER_PASSWORD }}
+          image_name: ${{ env.DOCKER_IMAGE }}
+          tags: |
+            ${{ env.DOCKER_IMAGE }}:${{ github.sha }}
+            ${{ env.DOCKER_IMAGE }}:latest
