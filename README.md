@@ -1,7 +1,7 @@
-# people
+# teams
 
-[![main](https://github.com/chuhlomin/people/actions/workflows/main.yml/badge.svg)](https://github.com/chuhlomin/people/actions/workflows/main.yml)
-[![release](https://github.com/chuhlomin/people/actions/workflows/release.yml/badge.svg)](https://github.com/chuhlomin/people/actions/workflows/release.yml)
+[![main](https://github.com/chuhlomin/teams/actions/workflows/main.yml/badge.svg)](https://github.com/chuhlomin/teams/actions/workflows/main.yml)
+[![release](https://github.com/chuhlomin/teams/actions/workflows/release.yml/badge.svg)](https://github.com/chuhlomin/teams/actions/workflows/release.yml)
 
 A small Go application to visualize GitHub teams and their members.
 Helps to find out:

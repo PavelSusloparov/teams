@@ -1,4 +1,4 @@
-module github.com/chuhlomin/people
+module github.com/chuhlomin/teams
 
 go 1.19
 
