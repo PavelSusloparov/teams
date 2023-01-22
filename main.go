@@ -16,7 +16,7 @@ import (
 type config struct {
 	Token    string `env:"GITHUB_TOKEN" long:"token" description:"GitHub access token" required:"true"`
 	OrgName  string `env:"GITHUB_ORG" long:"org" description:"GitHub organization name" required:"true"`
-	Template string `env:"TEMPLATE" long:"template" description:"Go template" default:""`
+	Template string `env:"TEMPLATE" long:"template" description:"Go template (optional)" default:""`
 	Output   string `env:"OUTPUT" long:"output" description:"Output file" default:"output/graph.dot"`
 }
 

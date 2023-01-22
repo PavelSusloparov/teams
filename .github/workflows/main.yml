@@ -36,6 +36,4 @@ jobs:
           username: chuhlomin
           password: ${{ secrets.DOCKER_PASSWORD }}
           image_name: ${{ env.DOCKER_IMAGE }}
-          tags: |
-            ${{ env.DOCKER_IMAGE }}:${{ github.sha }}
-            ${{ env.DOCKER_IMAGE }}:latest
+          tags: ${{ env.DOCKER_IMAGE }}:${{ github.sha }}

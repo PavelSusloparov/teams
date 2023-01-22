@@ -1,0 +1,23 @@
+version: "3.9"
+
+services:
+  teams:
+    image: chuhlomin/teams:latest
+    container_name: teams
+    environment:
+      - GITHUB_TOKEN
+      - GITHUB_ORG
+    volumes:
+      - ./output:/output
+
+  graphviz:
+    image: nshine/dot
+    container_name: graphviz
+    depends_on:
+      teams:
+        condition: service_completed_successfully
+    volumes:
+      - ./output:/output
+    command: >
+      sh -c "dot -Tsvg -o /output/graph.svg /output/graph.dot &&
+             dot -Tpng -o /output/graph.png /output/graph.dot"
