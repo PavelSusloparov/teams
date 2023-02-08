@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"log"
 	"sort"
 	"strings"
 
@@ -47,8 +48,34 @@ func (p *Processor) Members(orgName string) ([]string, error) {
 	return returnMembers, nil
 }
 
+func check(err error) {
+	if err != nil {
+		log.Fatalf("Something went wrong. Error message - %q", err)
+	}
+}
+
+func (p *Processor) getTeamsPaginated(orgName string) []*github.Team {
+	nextPage := 0
+	var allTeams []*github.Team
+	for {
+		opt := github.ListOptions{Page: nextPage, PerPage: 30}
+		teams, response, err := p.TeamsService.ListTeams(p.Context, orgName, &opt)
+		check(err)
+		for _, currentTeam := range teams {
+			allTeams = append(allTeams, currentTeam)
+		}
+		if response.NextPage == response.LastPage {
+			break
+		} else {
+			nextPage = response.NextPage
+		}
+	}
+	return allTeams
+}
+
 func (p *Processor) Teams(orgName string, orgID int64) (teamMembers map[string][]string, teamParents map[string]string, err error) {
-	teams, _, err := p.TeamsService.ListTeams(p.Context, orgName, nil)
+	teams := p.getTeamsPaginated(orgName)
+
 	if err != nil {
 		return nil, nil, err
 	}
