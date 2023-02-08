@@ -14,10 +14,11 @@ import (
 )
 
 type config struct {
-	Token    string `env:"GITHUB_TOKEN" long:"token" description:"GitHub access token" required:"true"`
-	OrgName  string `env:"GITHUB_ORG" long:"org" description:"GitHub organization name" required:"true"`
-	Template string `env:"TEMPLATE" long:"template" description:"Go template (optional)" default:""`
-	Output   string `env:"OUTPUT" long:"output" description:"Output file" default:"output/graph.dot"`
+	HideTeamMembers bool   `env:"HIDE_TEAM_MEMBERS" long:"show_team_members" description:"Show Team Members on the diagram" required:"true"`
+	Token           string `env:"GITHUB_TOKEN" long:"token" description:"GitHub access token" required:"true"`
+	OrgName         string `env:"GITHUB_ORG" long:"org" description:"GitHub organization name" required:"true"`
+	Template        string `env:"TEMPLATE" long:"template" description:"Go template (optional)" default:""`
+	Output          string `env:"OUTPUT" long:"output" description:"Output file" default:"output/graph.dot"`
 }
 
 func main() {
@@ -52,18 +53,18 @@ func main() {
 	}
 
 	log.Println("Getting organization members...")
-	members, err := processor.Members(cfg.OrgName)
+	members, err := processor.Members(cfg.OrgName, cfg.HideTeamMembers)
 	if err != nil {
 		log.Fatalf("Error getting members: %v", err)
 	}
 
 	log.Println("Getting organization teams...")
-	teams, parents, err := processor.Teams(cfg.OrgName, orgID)
+	teams, parents, err := processor.Teams(cfg.OrgName, cfg.HideTeamMembers, orgID)
 	if err != nil {
 		log.Fatalf("Error getting teams: %v", err)
 	}
 
-	membersWitoutTeam := FindMembersWithoutTeam(teams, members)
+	membersWitoutTeam := FindMembersWithoutTeam(cfg.HideTeamMembers, teams, members)
 	if len(membersWitoutTeam) > 0 {
 		teams["NO_TEAM"] = membersWitoutTeam
 	}
@@ -162,7 +163,12 @@ func FindSubsets(teams map[string][]string) subsets {
 	return s
 }
 
-func FindMembersWithoutTeam(teams map[string][]string, members []string) []string {
+func FindMembersWithoutTeam(hideTeamMembers bool, teams map[string][]string, members []string) []string {
+	var membersWithoutTeam []string
+	if hideTeamMembers {
+		return membersWithoutTeam
+	}
+
 	var existingMembers = make(map[string]struct{})
 	for _, teamMembers := range teams {
 		for _, member := range teamMembers {
@@ -170,7 +176,6 @@ func FindMembersWithoutTeam(teams map[string][]string, members []string) []strin
 		}
 	}
 
-	var membersWithoutTeam []string
 	for _, member := range members {
 		if _, ok := existingMembers[member]; !ok {
 			membersWithoutTeam = append(membersWithoutTeam, member)

@@ -2,10 +2,9 @@ package main
 
 import (
 	"context"
+	"github.com/google/go-github/v48/github"
 	"sort"
 	"strings"
-
-	"github.com/google/go-github/v48/github"
 )
 
 type organizationsService interface {
@@ -33,13 +32,16 @@ func (p *Processor) GetOrganizationID(orgName string) (int64, error) {
 	return *org.ID, nil
 }
 
-func (p *Processor) Members(orgName string) ([]string, error) {
+func (p *Processor) Members(orgName string, hideTeamMembers bool) ([]string, error) {
+	var returnMembers []string
+	if hideTeamMembers {
+		return returnMembers, nil
+	}
 	members, _, err := p.OrganizationsService.ListMembers(p.Context, orgName, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	var returnMembers []string
 	for _, member := range members {
 		returnMembers = append(returnMembers, *member.Login)
 	}
@@ -47,7 +49,7 @@ func (p *Processor) Members(orgName string) ([]string, error) {
 	return returnMembers, nil
 }
 
-func (p *Processor) Teams(orgName string, orgID int64) (teamMembers map[string][]string, teamParents map[string]string, err error) {
+func (p *Processor) Teams(orgName string, hideTeamMembers bool, orgID int64) (teamMembers map[string][]string, teamParents map[string]string, err error) {
 	teams, _, err := p.TeamsService.ListTeams(p.Context, orgName, nil)
 	if err != nil {
 		return nil, nil, err
@@ -56,19 +58,21 @@ func (p *Processor) Teams(orgName string, orgID int64) (teamMembers map[string][
 	teamMembers = make(map[string][]string)
 	teamParents = make(map[string]string)
 	for _, team := range teams {
-		members, _, err := p.TeamsService.ListTeamMembersByID(p.Context, orgID, *team.ID, nil)
-		if err != nil {
-			return nil, nil, err
+		if !hideTeamMembers {
+			members, _, err := p.TeamsService.ListTeamMembersByID(p.Context, orgID, *team.ID, nil)
+			if err != nil {
+				return nil, nil, err
+			}
+
+			var returnMembers []string
+			for _, member := range members {
+				returnMembers = append(returnMembers, *member.Login)
+			}
+
+			sort.Slice(returnMembers, func(i, j int) bool { return strings.ToLower(returnMembers[i]) < strings.ToLower(returnMembers[j]) })
+
+			teamMembers[*team.Name] = returnMembers
 		}
-
-		var returnMembers []string
-		for _, member := range members {
-			returnMembers = append(returnMembers, *member.Login)
-		}
-
-		sort.Slice(returnMembers, func(i, j int) bool { return strings.ToLower(returnMembers[i]) < strings.ToLower(returnMembers[j]) })
-
-		teamMembers[*team.Name] = returnMembers
 		if team.Parent != nil {
 			teamParents[*team.Name] = *team.Parent.Name
 		}
