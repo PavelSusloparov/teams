@@ -2,12 +2,14 @@ package main
 
 import (
 	"context"
-	"log"
+	"fmt"
 	"sort"
 	"strings"
 
 	"github.com/google/go-github/v48/github"
 )
+
+const perPage = 100
 
 type organizationsService interface {
 	Get(ctx context.Context, org string) (*github.Organization, *github.Response, error)
@@ -35,47 +37,40 @@ func (p *Processor) GetOrganizationID(orgName string) (int64, error) {
 }
 
 func (p *Processor) Members(orgName string) ([]string, error) {
-	members, _, err := p.OrganizationsService.ListMembers(p.Context, orgName, nil)
-	if err != nil {
-		return nil, err
-	}
+	var currentPage = 0
+	var result []string
 
-	var returnMembers []string
-	for _, member := range members {
-		returnMembers = append(returnMembers, *member.Login)
-	}
-
-	return returnMembers, nil
-}
-
-func check(err error) {
-	if err != nil {
-		log.Fatalf("Something went wrong. Error message - %q", err)
-	}
-}
-
-func (p *Processor) getTeamsPaginated(orgName string) []*github.Team {
-	nextPage := 0
-	var allTeams []*github.Team
 	for {
-		opt := github.ListOptions{Page: nextPage, PerPage: 30}
-		teams, response, err := p.TeamsService.ListTeams(p.Context, orgName, &opt)
-		check(err)
-		for _, currentTeam := range teams {
-			allTeams = append(allTeams, currentTeam)
+		members, response, err := p.OrganizationsService.ListMembers(
+			p.Context,
+			orgName,
+			&github.ListMembersOptions{
+				ListOptions: github.ListOptions{
+					Page:    currentPage,
+					PerPage: perPage,
+				},
+			},
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to list org members: %w", err)
 		}
-		if response.NextPage == response.LastPage {
+
+		for _, member := range members {
+			result = append(result, *member.Login)
+		}
+
+		if currentPage == response.LastPage {
 			break
-		} else {
-			nextPage = response.NextPage
 		}
+
+		currentPage = response.NextPage
 	}
-	return allTeams
+
+	return result, nil
 }
 
 func (p *Processor) Teams(orgName string, orgID int64) (teamMembers map[string][]string, teamParents map[string]string, err error) {
-	teams := p.getTeamsPaginated(orgName)
-
+	teams, err := p.getTeamsPaginated(orgName)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -83,9 +78,9 @@ func (p *Processor) Teams(orgName string, orgID int64) (teamMembers map[string][
 	teamMembers = make(map[string][]string)
 	teamParents = make(map[string]string)
 	for _, team := range teams {
-		members, _, err := p.TeamsService.ListTeamMembersByID(p.Context, orgID, *team.ID, nil)
+		members, err := p.getTeamMembersPaginated(orgID, team)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("failed to list team members for %q: %w", *team.Name, err)
 		}
 
 		var returnMembers []string
@@ -102,4 +97,65 @@ func (p *Processor) Teams(orgName string, orgID int64) (teamMembers map[string][
 	}
 
 	return teamMembers, teamParents, nil
+}
+
+func (p *Processor) getTeamsPaginated(orgName string) ([]*github.Team, error) {
+	currentPage := 0
+
+	var allTeams []*github.Team
+	for {
+		teams, response, err := p.TeamsService.ListTeams(
+			p.Context,
+			orgName,
+			&github.ListOptions{
+				Page:    currentPage,
+				PerPage: perPage,
+			},
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to list teams: %w", err)
+		}
+
+		allTeams = append(allTeams, teams...)
+
+		if currentPage == response.LastPage {
+			break
+		}
+
+		currentPage = response.NextPage
+	}
+
+	return allTeams, nil
+}
+
+func (p *Processor) getTeamMembersPaginated(orgID int64, team *github.Team) ([]*github.User, error) {
+	currentPage := 0
+
+	var allMembers []*github.User
+	for {
+		members, response, err := p.TeamsService.ListTeamMembersByID(
+			p.Context,
+			orgID,
+			*team.ID,
+			&github.TeamListTeamMembersOptions{
+				ListOptions: github.ListOptions{
+					Page:    currentPage,
+					PerPage: perPage,
+				},
+			},
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		allMembers = append(allMembers, members...)
+
+		if currentPage == response.LastPage {
+			break
+		}
+
+		currentPage = response.NextPage
+	}
+
+	return allMembers, nil
 }
