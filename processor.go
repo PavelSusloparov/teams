@@ -25,6 +25,7 @@ type Processor struct {
 	Context              context.Context
 	OrganizationsService organizationsService
 	TeamsService         teamsService
+	HideMembers          bool
 }
 
 func (p *Processor) GetOrganizationID(orgName string) (int64, error) {
@@ -78,19 +79,22 @@ func (p *Processor) Teams(orgName string, orgID int64) (teamMembers map[string][
 	teamMembers = make(map[string][]string)
 	teamParents = make(map[string]string)
 	for _, team := range teams {
-		members, err := p.getTeamMembersPaginated(orgID, team)
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to list team members for %q: %w", *team.Name, err)
+		if !p.HideMembers {
+			members, err := p.getTeamMembersPaginated(orgID, team)
+			if err != nil {
+				return nil, nil, fmt.Errorf("failed to list team members for %q: %w", *team.Name, err)
+			}
+
+			var returnMembers []string
+			for _, member := range members {
+				returnMembers = append(returnMembers, *member.Login)
+			}
+
+			sort.Slice(returnMembers, func(i, j int) bool { return strings.ToLower(returnMembers[i]) < strings.ToLower(returnMembers[j]) })
+
+			teamMembers[*team.Name] = returnMembers
 		}
 
-		var returnMembers []string
-		for _, member := range members {
-			returnMembers = append(returnMembers, *member.Login)
-		}
-
-		sort.Slice(returnMembers, func(i, j int) bool { return strings.ToLower(returnMembers[i]) < strings.ToLower(returnMembers[j]) })
-
-		teamMembers[*team.Name] = returnMembers
 		if team.Parent != nil {
 			teamParents[*team.Name] = *team.Parent.Name
 		}

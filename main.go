@@ -14,10 +14,11 @@ import (
 )
 
 type config struct {
-	Token    string `env:"GITHUB_TOKEN" long:"token" description:"GitHub access token" required:"true"`
-	OrgName  string `env:"GITHUB_ORG" long:"org" description:"GitHub organization name" required:"true"`
-	Template string `env:"TEMPLATE" long:"template" description:"Go template (optional)" default:""`
-	Output   string `env:"OUTPUT" long:"output" description:"Output file" default:"output/graph.dot"`
+	Token       string `env:"GITHUB_TOKEN" long:"token" description:"GitHub access token" required:"true"`
+	OrgName     string `env:"GITHUB_ORG" long:"org" description:"GitHub organization name" required:"true"`
+	HideMembers bool   `env:"HIDE_MEMBERS" long:"hide-members" description:"Hide Team Members on the diagram"`
+	Template    string `env:"TEMPLATE" long:"template" description:"Go template (optional)" default:""`
+	Output      string `env:"OUTPUT" long:"output" description:"Output file" default:"output/graph.dot"`
 }
 
 func main() {
@@ -43,6 +44,7 @@ func main() {
 		Context:              ctx,
 		OrganizationsService: client.Organizations,
 		TeamsService:         client.Teams,
+		HideMembers:          cfg.HideMembers,
 	}
 
 	log.Println("Getting organization ID...")
@@ -51,21 +53,24 @@ func main() {
 		log.Fatalf("Error checking organization access: %v", err)
 	}
 
-	log.Println("Getting organization members...")
-	members, err := processor.Members(cfg.OrgName)
-	if err != nil {
-		log.Fatalf("Error getting members: %v", err)
-	}
-
 	log.Println("Getting organization teams...")
 	teams, parents, err := processor.Teams(cfg.OrgName, orgID)
 	if err != nil {
 		log.Fatalf("Error getting teams: %v", err)
 	}
 
-	membersWitoutTeam := FindMembersWithoutTeam(teams, members)
-	if len(membersWitoutTeam) > 0 {
-		teams["NO_TEAM"] = membersWitoutTeam
+	var members []string
+	if !cfg.HideMembers {
+		log.Println("Getting organization members...")
+		members, err := processor.Members(cfg.OrgName)
+		if err != nil {
+			log.Fatalf("Error getting members: %v", err)
+		}
+
+		membersWitoutTeam := FindMembersWithoutTeam(teams, members)
+		if len(membersWitoutTeam) > 0 {
+			teams["NO_TEAM"] = membersWitoutTeam
+		}
 	}
 
 	log.Println("Rendering template...")
