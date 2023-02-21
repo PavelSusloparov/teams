@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-  
+
 	"github.com/google/go-github/v48/github"
 )
 
@@ -25,6 +25,7 @@ type Processor struct {
 	Context              context.Context
 	OrganizationsService organizationsService
 	TeamsService         teamsService
+	HideMembers          bool
 }
 
 func (p *Processor) GetOrganizationID(orgName string) (int64, error) {
@@ -36,13 +37,9 @@ func (p *Processor) GetOrganizationID(orgName string) (int64, error) {
 	return *org.ID, nil
 }
 
-func (p *Processor) Members(orgName string, hideTeamMembers bool) ([]string, error) {
+func (p *Processor) Members(orgName string) ([]string, error) {
 	var currentPage = 0
 	var result []string
-  
-  if hideTeamMembers {
-		return result, nil
-	}
 
 	for {
 		members, response, err := p.OrganizationsService.ListMembers(
@@ -73,7 +70,7 @@ func (p *Processor) Members(orgName string, hideTeamMembers bool) ([]string, err
 	return result, nil
 }
 
-func (p *Processor) Teams(orgName string, hideTeamMembers bool, orgID int64) (teamMembers map[string][]string, teamParents map[string]string, err error) {
+func (p *Processor) Teams(orgName string, orgID int64) (teamMembers map[string][]string, teamParents map[string]string, err error) {
 	teams, err := p.getTeamsPaginated(orgName)
 	if err != nil {
 		return nil, nil, err
@@ -82,7 +79,7 @@ func (p *Processor) Teams(orgName string, hideTeamMembers bool, orgID int64) (te
 	teamMembers = make(map[string][]string)
 	teamParents = make(map[string]string)
 	for _, team := range teams {
-		if !hideTeamMembers {
+		if !p.HideMembers {
 			members, err := p.getTeamMembersPaginated(orgID, team)
 			if err != nil {
 				return nil, nil, fmt.Errorf("failed to list team members for %q: %w", *team.Name, err)
@@ -97,6 +94,7 @@ func (p *Processor) Teams(orgName string, hideTeamMembers bool, orgID int64) (te
 
 			teamMembers[*team.Name] = returnMembers
 		}
+
 		if team.Parent != nil {
 			teamParents[*team.Name] = *team.Parent.Name
 		}

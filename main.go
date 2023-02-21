@@ -14,11 +14,11 @@ import (
 )
 
 type config struct {
-	HideTeamMembers bool   `env:"HIDE_TEAM_MEMBERS" long:"show_team_members" description:"Show Team Members on the diagram" required:"true"`
-	Token           string `env:"GITHUB_TOKEN" long:"token" description:"GitHub access token" required:"true"`
-	OrgName         string `env:"GITHUB_ORG" long:"org" description:"GitHub organization name" required:"true"`
-	Template        string `env:"TEMPLATE" long:"template" description:"Go template (optional)" default:""`
-	Output          string `env:"OUTPUT" long:"output" description:"Output file" default:"output/graph.dot"`
+	Token       string `env:"GITHUB_TOKEN" long:"token" description:"GitHub access token" required:"true"`
+	OrgName     string `env:"GITHUB_ORG" long:"org" description:"GitHub organization name" required:"true"`
+	HideMembers bool   `env:"HIDE_MEMBERS" long:"hide-members" description:"Hide Team Members on the diagram"`
+	Template    string `env:"TEMPLATE" long:"template" description:"Go template (optional)" default:""`
+	Output      string `env:"OUTPUT" long:"output" description:"Output file" default:"output/graph.dot"`
 }
 
 func main() {
@@ -44,6 +44,7 @@ func main() {
 		Context:              ctx,
 		OrganizationsService: client.Organizations,
 		TeamsService:         client.Teams,
+		HideMembers:          cfg.HideMembers,
 	}
 
 	log.Println("Getting organization ID...")
@@ -52,21 +53,24 @@ func main() {
 		log.Fatalf("Error checking organization access: %v", err)
 	}
 
-	log.Println("Getting organization members...")
-	members, err := processor.Members(cfg.OrgName, cfg.HideTeamMembers)
-	if err != nil {
-		log.Fatalf("Error getting members: %v", err)
-	}
-
 	log.Println("Getting organization teams...")
-	teams, parents, err := processor.Teams(cfg.OrgName, cfg.HideTeamMembers, orgID)
+	teams, parents, err := processor.Teams(cfg.OrgName, orgID)
 	if err != nil {
 		log.Fatalf("Error getting teams: %v", err)
 	}
 
-	membersWitoutTeam := FindMembersWithoutTeam(cfg.HideTeamMembers, teams, members)
-	if len(membersWitoutTeam) > 0 {
-		teams["NO_TEAM"] = membersWitoutTeam
+	var members []string
+	if !cfg.HideMembers {
+		log.Println("Getting organization members...")
+		members, err := processor.Members(cfg.OrgName)
+		if err != nil {
+			log.Fatalf("Error getting members: %v", err)
+		}
+
+		membersWitoutTeam := FindMembersWithoutTeam(teams, members)
+		if len(membersWitoutTeam) > 0 {
+			teams["NO_TEAM"] = membersWitoutTeam
+		}
 	}
 
 	log.Println("Rendering template...")
@@ -163,12 +167,7 @@ func FindSubsets(teams map[string][]string) subsets {
 	return s
 }
 
-func FindMembersWithoutTeam(hideTeamMembers bool, teams map[string][]string, members []string) []string {
-	var membersWithoutTeam []string
-	if hideTeamMembers {
-		return membersWithoutTeam
-	}
-
+func FindMembersWithoutTeam(teams map[string][]string, members []string) []string {
 	var existingMembers = make(map[string]struct{})
 	for _, teamMembers := range teams {
 		for _, member := range teamMembers {
@@ -176,6 +175,7 @@ func FindMembersWithoutTeam(hideTeamMembers bool, teams map[string][]string, mem
 		}
 	}
 
+	var membersWithoutTeam []string
 	for _, member := range members {
 		if _, ok := existingMembers[member]; !ok {
 			membersWithoutTeam = append(membersWithoutTeam, member)
