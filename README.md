@@ -105,3 +105,20 @@ Example output:
 ```
 
 Open `output/graph.png` or `output/graph.svg`.
+
+## Common problems
+
+```bash
+export GITHUB_TOKEN=<value>
+export GITHUB_ORG=<value>
+make clean run
+2023/02/08 14:56:28 Getting organization ID...
+2023/02/08 14:56:28 Getting organization members...
+2023/02/08 14:56:28 Getting organization teams...
+2023/02/08 14:56:36 Rendering template...
+2023/02/08 14:56:36 Done!
+make: dot: No such file or directory
+make: *** [run-graphviz] Error 1
+```
+
+**Solution:** Install [Go >=1.19](https://go.dev/dl/) and [Graphviz](http://graphviz.org/download/)

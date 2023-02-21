@@ -91,6 +91,102 @@ func TestShoudListMembers(t *testing.T) {
 	}
 }
 
+func TestShoudListMembersPaginated(t *testing.T) {
+	mockOS := new(mockOrganizationsService)
+	mockOS.
+		On(
+			"ListMembers",
+			mock.Anything,
+			"test-org",
+			&github.ListMembersOptions{
+				ListOptions: github.ListOptions{
+					Page:    0,
+					PerPage: 100,
+				},
+			},
+		).
+		Return(
+			[]*github.User{
+				{Login: github.String("test-user")},
+				{Login: github.String("test-user-2")},
+			},
+			&github.Response{
+				NextPage: 1,
+				LastPage: 2,
+			},
+			nil,
+		)
+	mockOS.
+		On(
+			"ListMembers",
+			mock.Anything,
+			"test-org",
+			&github.ListMembersOptions{
+				ListOptions: github.ListOptions{
+					Page:    1,
+					PerPage: 100,
+				},
+			},
+		).
+		Return(
+			[]*github.User{
+				{Login: github.String("test-user-3")},
+				{Login: github.String("test-user-4")},
+			},
+			&github.Response{
+				NextPage: 2,
+				LastPage: 2,
+			},
+			nil,
+		)
+	mockOS.
+		On(
+			"ListMembers",
+			mock.Anything,
+			"test-org",
+			&github.ListMembersOptions{
+				ListOptions: github.ListOptions{
+					Page:    2,
+					PerPage: 100,
+				},
+			},
+		).
+		Return(
+			[]*github.User{
+				{Login: github.String("test-user-5")},
+				{Login: github.String("test-user-6")},
+			},
+			&github.Response{
+				NextPage: 2,
+				LastPage: 2,
+			},
+			nil,
+		)
+
+	processor := Processor{
+		Context:              context.Background(),
+		OrganizationsService: mockOS,
+	}
+
+	members, err := processor.Members("test-org")
+	if err != nil {
+		t.Errorf("Error creating processor: %v", err)
+	}
+
+	expected := []string{
+		"test-user",
+		"test-user-2",
+		"test-user-3",
+		"test-user-4",
+		"test-user-5",
+		"test-user-6",
+	}
+
+	if !reflect.DeepEqual(members, expected) {
+		t.Errorf("Expected %v, got %v", expected, members)
+	}
+}
+
 func TestShouldGetTeams(t *testing.T) {
 	mockTS := new(mockTeamsService)
 	mockTS.On("ListTeams", mock.Anything, "test-org", mock.Anything).Return([]*github.Team{
@@ -147,5 +243,195 @@ func TestShouldGetTeams(t *testing.T) {
 	_, _, err = processor.Teams("bad-org-2", 125)
 	if err == nil {
 		t.Errorf("Expected error, got nil")
+	}
+}
+
+func TestShouldGetTeamsPaginated(t *testing.T) {
+	mockTS := new(mockTeamsService)
+	mockTS.
+		On(
+			"ListTeams",
+			mock.Anything,
+			"test-org",
+			&github.ListOptions{
+				Page:    0,
+				PerPage: 100,
+			},
+		).
+		Return(
+			[]*github.Team{
+				{ID: github.Int64(1), Name: github.String("test-team")},
+				{ID: github.Int64(2), Name: github.String("test-team-2")},
+			},
+			&github.Response{
+				NextPage: 1,
+				LastPage: 2,
+			},
+			nil,
+		)
+	mockTS.
+		On(
+			"ListTeams",
+			mock.Anything,
+			"test-org",
+			&github.ListOptions{
+				Page:    1,
+				PerPage: 100,
+			},
+		).
+		Return(
+			[]*github.Team{
+				{ID: github.Int64(1), Name: github.String("test-team-3")},
+				{ID: github.Int64(2), Name: github.String("test-team-4")},
+			},
+			&github.Response{
+				NextPage: 2,
+				LastPage: 2,
+			},
+			nil,
+		)
+	mockTS.
+		On(
+			"ListTeams",
+			mock.Anything,
+			"test-org",
+			&github.ListOptions{
+				Page:    2,
+				PerPage: 100,
+			},
+		).
+		Return(
+			[]*github.Team{
+				{ID: github.Int64(1), Name: github.String("test-team-5")},
+				{ID: github.Int64(2), Name: github.String("test-team-6")},
+			},
+			&github.Response{
+				NextPage: 2,
+				LastPage: 2,
+			},
+			nil,
+		)
+
+	// assume that each team has one member
+	mockTS.On("ListTeamMembersByID", mock.Anything, int64(123), mock.Anything, mock.Anything).Return([]*github.User{
+		{Login: github.String("test-user")},
+	}, &github.Response{}, nil)
+
+	processor := Processor{
+		Context:      context.Background(),
+		TeamsService: mockTS,
+	}
+
+	teams, _, err := processor.Teams("test-org", 123)
+	if err != nil {
+		t.Errorf("Error creating processor: %v", err)
+	}
+
+	expected := map[string][]string{
+		"test-team":   {"test-user"},
+		"test-team-2": {"test-user"},
+		"test-team-3": {"test-user"},
+		"test-team-4": {"test-user"},
+		"test-team-5": {"test-user"},
+		"test-team-6": {"test-user"},
+	}
+
+	if !reflect.DeepEqual(teams, expected) {
+		t.Errorf("Expected teams to be %v, got %v", expected, teams)
+	}
+}
+
+func TestShouldGetTeamsMembersPaginated(t *testing.T) {
+	mockTS := new(mockTeamsService)
+	mockTS.
+		On("ListTeams", mock.Anything, "test-org", mock.Anything).
+		Return([]*github.Team{{ID: github.Int64(1), Name: github.String("test-team")}}, &github.Response{}, nil)
+
+	mockTS.
+		On(
+			"ListTeamMembersByID",
+			mock.Anything,
+			int64(123),
+			mock.Anything,
+			&github.TeamListTeamMembersOptions{
+				ListOptions: github.ListOptions{
+					Page:    0,
+					PerPage: 100,
+				},
+			},
+		).
+		Return(
+			[]*github.User{
+				{Login: github.String("test-user")},
+			},
+			&github.Response{
+				NextPage: 1,
+				LastPage: 2,
+			},
+			nil,
+		)
+	mockTS.
+		On(
+			"ListTeamMembersByID",
+			mock.Anything,
+			int64(123),
+			mock.Anything,
+			&github.TeamListTeamMembersOptions{
+				ListOptions: github.ListOptions{
+					Page:    1,
+					PerPage: 100,
+				},
+			},
+		).
+		Return(
+			[]*github.User{
+				{Login: github.String("test-user-2")},
+			},
+			&github.Response{
+				NextPage: 2,
+				LastPage: 2,
+			},
+			nil,
+		)
+	mockTS.
+		On(
+			"ListTeamMembersByID",
+			mock.Anything,
+			int64(123),
+			mock.Anything,
+			&github.TeamListTeamMembersOptions{
+				ListOptions: github.ListOptions{
+					Page:    2,
+					PerPage: 100,
+				},
+			},
+		).
+		Return(
+			[]*github.User{
+				{Login: github.String("test-user-3")},
+			},
+			&github.Response{
+				NextPage: 2,
+				LastPage: 2,
+			},
+			nil,
+		)
+
+	processor := Processor{
+		Context:      context.Background(),
+		TeamsService: mockTS,
+	}
+
+	teams, _, err := processor.Teams("test-org", 123)
+	if err != nil {
+		t.Errorf("Error creating processor: %v", err)
+	}
+
+	expected := map[string][]string{
+		"test-team": {"test-user", "test-user-2", "test-user-3"},
+	}
+
+	if !reflect.DeepEqual(teams, expected) {
+		t.Errorf("Expected teams to be %v, got %v", expected, teams)
 	}
 }
