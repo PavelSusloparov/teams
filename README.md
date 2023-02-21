@@ -43,10 +43,11 @@ Usage:
   app [OPTIONS]
 
 Application Options:
-      --token=    GitHub access token [$GITHUB_TOKEN]
-      --org=      GitHub organization name [$GITHUB_ORG]
-      --template= Go template (optional) [$TEMPLATE]
-      --output=   Output file (default: output/graph.dot) [$OUTPUT]
+      --token=        GitHub access token [$GITHUB_TOKEN]
+      --org=          GitHub organization name [$GITHUB_ORG]
+      --hide-members  Hide Team Members on the diagram [$HIDE_MEMBERS]
+      --template=     Go template (optional) [$TEMPLATE]
+      --output=       Output file (default: output/graph.dot) [$OUTPUT]
 
 Help Options:
   -h, --help      Show this help message
