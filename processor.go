@@ -60,7 +60,7 @@ func (p *Processor) Members(orgName string) ([]string, error) {
 			result = append(result, *member.Login)
 		}
 
-		if currentPage == response.LastPage {
+		if response.NextPage == 0 {
 			break
 		}
 
@@ -122,7 +122,7 @@ func (p *Processor) getTeamsPaginated(orgName string) ([]*github.Team, error) {
 
 		allTeams = append(allTeams, teams...)
 
-		if currentPage == response.LastPage {
+		if response.NextPage == 0 {
 			break
 		}
 
@@ -154,7 +154,7 @@ func (p *Processor) getTeamMembersPaginated(orgID int64, team *github.Team) ([]*
 
 		allMembers = append(allMembers, members...)
 
-		if currentPage == response.LastPage {
+		if response.NextPage == 0 {
 			break
 		}
 
